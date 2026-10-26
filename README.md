@@ -42,17 +42,6 @@ npm start
 
 Le serveur attend une connexion MongoDB avant d'écouter son port. Les erreurs de configuration ou de connexion sont affichées et empêchent le démarrage silencieux d'un service incomplet.
 
-## Créer un token de démonstration
-
-Dans le terminal du service formations, après avoir renseigné `.env` :
-
-```powershell
-$env:JWT_SECRET = "la-cle-configuree-dans-course-service-env"
-node -e "console.log(require('jsonwebtoken').sign({ id: 'test' }, process.env.JWT_SECRET, { expiresIn: '2h' }))"
-```
-
-Envoyer le token dans l'en-tête `Authorization: Bearer <token>`. Le secret n'est pas stocké dans le dépôt.
-
 ## API
 
 | Service | Méthode | Route | Réponse |
