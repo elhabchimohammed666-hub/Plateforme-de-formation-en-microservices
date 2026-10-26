@@ -1,0 +1,185 @@
+{
+  "info": {
+    "_postman_id": "f4965e34-3a37-4ee2-a9c7-c5bcf3303401",
+    "name": "M214 - Services Formation et Inscription",
+    "description": "Collection de démonstration des deux microservices. Renseigner la variable token de l'environnement après avoir configuré JWT_SECRET. Exécuter le dossier « Tests avec les services démarrés » avant le test 503 du dossier « Test 503 séparé ».",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "variable": [
+      { "key": "courseId", "value": "" },
+      { "key": "courseTitle", "value": "Formation M214 - Postman" },
+      { "key": "userId", "value": "etudiant-demo-postman" }
+    ]
+  },
+  "item": [
+    {
+      "name": "Tests avec les services démarrés",
+      "item": [
+        {
+          "name": "01 - GET Liste des formations (200)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{courseUrl}}/courses",
+            "description": "Liste des formations disponibles."
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Statut 200', function () { pm.response.to.have.status(200); });",
+                "pm.test('La réponse est une liste JSON', function () { pm.expect(pm.response.json()).to.be.an('array'); });"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "02 - POST Formation sans token (401)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Formation sans autorisation\",\n  \"price\": 1,\n  \"hours\": 1\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{courseUrl}}/courses",
+            "description": "Confirme que la création est protégée par le middleware JWT."
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Statut 401 sans token', function () { pm.response.to.have.status(401); });"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "03 - POST Créer une formation avec token (201)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"{{courseTitle}}\",\n  \"price\": 250,\n  \"hours\": 20\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{courseUrl}}/courses",
+            "description": "Nécessite une variable d'environnement token contenant un JWT signé avec JWT_SECRET."
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Statut 201', function () { pm.response.to.have.status(201); });",
+                "const course = pm.response.json();",
+                "pm.test('La formation créée contient un identifiant', function () { pm.expect(course._id).to.be.a('string'); });",
+                "pm.test('Le prix et la durée sont enregistrés', function () { pm.expect(course.price).to.eql(250); pm.expect(course.hours).to.eql(20); });",
+                "pm.environment.set('courseId', course._id);"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "04 - GET Formation par identifiant (200)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{courseUrl}}/courses/{{courseId}}",
+            "description": "Réutilise automatiquement l'identifiant obtenu lors de la création."
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Statut 200', function () { pm.response.to.have.status(200); });",
+                "pm.test('La formation créée est retrouvée', function () { pm.expect(pm.response.json()._id).to.eql(pm.environment.get('courseId')); });"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "05 - POST Créer une inscription (201, total 250)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"courses\": [\"{{courseId}}\"]\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{enrollmentUrl}}/enrollments",
+            "description": "Récupère la formation via HTTP et vérifie le calcul du total côté serveur."
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Statut 201', function () { pm.response.to.have.status(201); });",
+                "pm.test('Le total est calculé correctement', function () { pm.expect(pm.response.json().total).to.eql(250); });"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "06 - POST Formation inexistante (404)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"courses\": [\"ffffffffffffffffffffffff\"]\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{enrollmentUrl}}/enrollments"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Statut 404 pour une formation absente', function () { pm.response.to.have.status(404); });"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "07 - POST Identifiant mal formé (400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"courses\": [\"identifiant-invalide\"]\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{enrollmentUrl}}/enrollments"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Statut 400 pour des données invalides', function () { pm.response.to.have.status(400); });"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "Test 503 séparé",
+      "description": "Arrêter course-service, laisser enrollment-service actif et exécuter uniquement cette requête. Redémarrer course-service après le test.",
+      "item": [
+        {
+          "name": "08 - POST Course-service indisponible (503)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"courses\": [\"0123456789abcdef01234567\"]\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{enrollmentUrl}}/enrollments",
+            "description": "Ne pas exécuter tant que course-service est démarré."
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Statut 503 si course-service est arrêté', function () { pm.response.to.have.status(503); });",
+                "pm.test('Le message indique que le service est indisponible', function () { pm.expect(pm.response.json().message).to.include('indisponible'); });"
+              ]
+            }
+          }]
+        }
+      ]
+    }
+  ]
+}
