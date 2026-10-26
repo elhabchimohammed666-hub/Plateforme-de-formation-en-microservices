@@ -1,4 +1,4 @@
-# Projet M214 - microservices de formation
+# microservices de formation
 
 Le projet comprend deux API Node.js indépendantes, conformément au sujet :
 
